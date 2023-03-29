@@ -1,5 +1,7 @@
 package seedu.address.ui;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -14,6 +16,7 @@ import javafx.scene.control.TextInputControl;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import seedu.address.commons.core.GuiSettings;
 import seedu.address.commons.core.LogsCenter;
@@ -22,6 +25,7 @@ import seedu.address.logic.commands.CommandResult;
 import seedu.address.logic.commands.exceptions.CommandException;
 import seedu.address.logic.commands.jobs.CompleteDeliveryJobCommand;
 import seedu.address.logic.commands.jobs.DeleteDeliveryJobCommand;
+import seedu.address.logic.commands.jobs.ImportDeliveryJobCommand;
 import seedu.address.logic.parser.exceptions.ParseException;
 import seedu.address.model.jobs.DeliveryJob;
 import seedu.address.model.jobs.sorters.DeliveryFilterOption;
@@ -94,6 +98,8 @@ public class MainWindow extends UiPart<Stage> {
             refreshDeliveryJobDetailPane();
         } catch (ParseException | CommandException e) {
             logger.warning(e.getMessage());
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
         }
     };
 
@@ -128,7 +134,7 @@ public class MainWindow extends UiPart<Stage> {
         try {
             deliveryJobListPanel.selectPrevious();
             logic.execute(new DeleteDeliveryJobCommand(job.getJobId()));
-        } catch (ParseException | CommandException e) {
+        } catch (ParseException | CommandException | FileNotFoundException e) {
             logger.warning(e.getMessage());
         }
     };
@@ -184,6 +190,7 @@ public class MainWindow extends UiPart<Stage> {
         reminderListWindow = new ReminderListWindow(new Stage(), logic);
         statsWindow = new StatisticsWindow(new Stage(), logic);
         addressBookWindow = new AddressBookWindow(new Stage(), logic);
+
     }
 
     /**
@@ -298,6 +305,7 @@ public class MainWindow extends UiPart<Stage> {
             helpWindow.focus();
         }
     }
+
 
     /**
      * Reloads and opens Timetable window.
@@ -438,6 +446,21 @@ public class MainWindow extends UiPart<Stage> {
         addDeliveryJobWindow.fillInnerParts();
     }
 
+    @FXML
+    private void handleDeliveryJobSystemImportAction() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Open Files");
+        File selectedFile = fileChooser.showOpenDialog(new Stage());
+
+        try {
+            logic.execute(new ImportDeliveryJobCommand(selectedFile));
+        } catch (ParseException | CommandException e) {
+            logger.warning("[Event] importDeliveryJob" + e.getMessage());
+        } catch (FileNotFoundException e) {
+            logger.warning("[Event] importDeliveryJob" + e.getMessage());
+        }
+    }
+
     /**
      * Shows main window
      */
@@ -483,6 +506,10 @@ public class MainWindow extends UiPart<Stage> {
                 openTimetable();
             }
 
+            if (commandResult.isShowTimetable()) {
+                handleTimetable();
+            }
+
             if (commandResult.isShowUnschedule()) {
                 handleUnscheduledTimetable();
             }
@@ -508,6 +535,8 @@ public class MainWindow extends UiPart<Stage> {
             logger.info("Invalid command: " + commandText);
             resultDisplay.setFeedbackToUser(e.getMessage());
             throw e;
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
         }
     }
 }
